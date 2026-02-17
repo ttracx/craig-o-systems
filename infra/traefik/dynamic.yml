@@ -1,0 +1,8 @@
+http:
+  middlewares:
+    strip-s-prefix:
+      stripPrefixRegex:
+        regex:
+          - "^/s/[^/]+"
+
+  # Note: session routes are created via container labels at runtime (by orchestrator).

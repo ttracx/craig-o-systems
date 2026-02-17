@@ -1,0 +1,62 @@
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --api.dashboard=true
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "8080:8080"  # traefik dashboard (lock this down in real use)
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: craigos
+      POSTGRES_USER: craigos
+      POSTGRES_PASSWORD: craigos_dev_pw_change_me
+    volumes:
+      - craigos_pg:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  orchestrator:
+    build: ../services/orchestrator
+    environment:
+      DATABASE_URL: postgresql+psycopg://craigos:craigos_dev_pw_change_me@db:5432/craigos
+      JWT_SECRET: change_me_long_random
+      DOCKER_NETWORK: craigos_net
+      VM_IMAGE_DEFAULT: dockurr/macos
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - db
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.orchestrator.rule=PathPrefix(`/api`)
+      - traefik.http.routers.orchestrator.entrypoints=web
+      - traefik.http.services.orchestrator.loadbalancer.server.port=8000
+
+  portal:
+    build: ../apps/portal
+    environment:
+      NEXT_PUBLIC_API_BASE: /api
+    depends_on:
+      - orchestrator
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.portal.rule=PathPrefix(`/`)
+      - traefik.http.routers.portal.entrypoints=web
+      - traefik.http.services.portal.loadbalancer.server.port=3000
+
+networks:
+  default:
+    name: craigos_net
+
+volumes:
+  craigos_pg:
