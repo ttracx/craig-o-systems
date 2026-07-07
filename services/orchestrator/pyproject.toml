@@ -9,7 +9,7 @@ dependencies = [
     "sqlalchemy==2.0.32",
     "psycopg[binary]==3.2.1",
     "docker==7.1.0",
-    "pyjwt==2.9.0",
+    "pyjwt==2.13.0",
 ]
 
 [tool.pytest.ini_options]
